@@ -1,0 +1,156 @@
+Alter login sa with password = '123456' 
+Alter login sa enable
+
+CREATE DATABASE FLY_SKY;
+USE FLY_SKY;
+
+--Passenger Table--
+CREATE TABLE PASSENGER(
+CustomerId int IDENTITY(1001,1) PRIMARY KEY,
+Name VARCHAR(50) NOT NULL,
+Email VARCHAR(70) NOT NULL UNIQUE CHECK(Email LIKE '%_@__%.__%' AND PATINDEX('%[^a-z,0-9,@,.,_,\-]%', Email) = 0 ),
+ContactNo VARCHAR(11) NOT NULL UNIQUE
+);
+
+--Employee Table--
+USE FLY_SKY;
+CREATE TABLE EMPLOYEE(
+EmployeeId int IDENTITY(2001,1) PRIMARY KEY,
+Name VARCHAR(50) NOT NULL,
+EmployeeType VARCHAR(10) NOT NULL,
+Email VARCHAR(70) NOT NULL,
+ContactNo VARCHAR(30) NOT NULL,
+Password VARCHAR(30) NOT NULL
+);
+SELECT * FROM EMPLOYEE where EmployeeId=2001 and Password='123456' and EmployeeType='Agency';
+--Airline Name--
+USE FLY_SKY;
+CREATE TABLE AIRLINE(
+AirlineID int IDENTITY(3001,1) PRIMARY KEY,
+AirlineName VARCHAR(60) NOT NULL UNIQUE
+);
+
+--Place Name--
+USE FLY_SKY;
+CREATE TABLE PLACE(
+PlaceID int IDENTITY(4001,1) PRIMARY KEY,
+PlaceName VARCHAR (60) NOT NULL,
+CountryName VARCHAR (60) NOT NULL
+);
+
+--Flight Info Table--
+USE FLY_SKY;
+CREATE TABLE FLIGHT_INFO(
+FlightID int IDENTITY(5001,1) PRIMARY KEY,
+StartingPlace VARCHAR (60) NOT NULL,
+TrangitPoint VARCHAR (60) NULL,
+Destination VARCHAR (60) NOT NULL,
+AirLineName VARCHAR (60) NOT NULL,
+DepartureTime TIME (0) NOT NULL,
+ArrivalTime TIME (0) NULL,
+SeatCapacity int NOT NULL,
+EconomicClass DECIMAL(10,2) NOT NULL,
+BusinessClass DECIMAL (10,2) NOT NULL
+);
+
+--Flight Info with Date Table--
+USE FLY_SKY;
+CREATE TABLE FLIGHT_INFO_FINAL(
+FlightFinalID int IDENTITY(6001,1) PRIMARY KEY,
+FlightID int NOT NULL FOREIGN KEY REFERENCES FLIGHT_INFO (FlightId),
+FlightDate DATETIME
+);
+
+--Ticket Buying Table--
+USE FLY_SKY;
+CREATE TABLE TICKET_BUYING(
+TicketID int IDENTITY(7001,1) PRIMARY KEY,
+CustomerId int NOT NULL FOREIGN KEY REFERENCES Passenger(CustomerId),
+FlightFinalID int NOT NULL FOREIGN KEY REFERENCES FLIGHT_INFO_FINAL(FlightFinalID),
+Class VARCHAR (20) NOT NULL
+);
+SELECT * FROM TICKET_BUYING;
+--Bill Table--
+USE FLY_SKY;
+CREATE TABLE BILL
+(
+TicketID int NOT NULL FOREIGN KEY REFERENCES TICKET_BUYING(TicketID),
+Class VARCHAR(20) NOT NULL,
+BillMethod VARCHAR(30) NULL,
+ClassRate DECIMAL(10,2) NOT NULL,
+SeatAmount int NOT NULL,
+TotalBill DECIMAL(10,2) NOT NULL
+);
+
+--Flight Info Join Flight Info Final--
+SELECT FLIGHT_INFO_FINAL.FlightFinalID,FLIGHT_INFO_FINAL.FlightID,FLIGHT_INFO_FINAL.FlightDate,FLIGHT_INFO.StartingPlace,FLIGHT_INFO.TrangitPoint,FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName,FLIGHT_INFO.DepartureTime,FLIGHT_INFO.ArrivalTime,FLIGHT_INFO.SeatCapacity,FLIGHT_INFO.EconomicClass,FLIGHT_INFO.BusinessClass
+FROM FLIGHT_INFO_FINAL INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID;
+
+--Ticket Buying Join Passenger Join Flight Info--
+SELECT TICKET_BUYING.TicketID,TICKET_BUYING.CustomerId,PASSENGER.Name,TICKET_BUYING.Class,TICKET_BUYING.FlightFinalID AS 'Flight ID',FLIGHT_INFO_FINAL.FlightDate AS 'Flight Date',FLIGHT_INFO.StartingPlace AS 'Starting Place',FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName AS 'Airline Name',FLIGHT_INFO.DepartureTime AS 'Departure Time',FLIGHT_INFO.ArrivalTime AS 'Arrival Time'
+FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerId=PASSENGER.CustomerId INNER JOIN
+FLIGHT_INFO_FINAL ON TICKET_BUYING.FlightFinalID=FLIGHT_INFO_FINAL.FlightFinalID INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID;
+
+--Ticket Join Passenger Join Bill--
+SELECT TICKET_BUYING.TicketID,PASSENGER.Name,TICKET_BUYING.FlightFinalID AS 'Flight ID',BILL.BillMethod,BILL.ClassRate,BILL.SeatAmount,BILL.TotalBill FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerID=PASSENGER.CustomerId FULL JOIN BILL ON TICKET_BUYING.TicketID=BILL.TicketID;
+
+SELECT FLIGHT_INFO.EconomicClass FROM FLIGHT_INFO_FINAL INNER JOIN FLIGHT_INFO ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID WHERE FLIGHT_INFO_FINAL.FlightFinalID=6002;
+
+SELECT * FROM BILL;
+
+--Total Income--
+SELECT SUM(TotalBill) AS 'SUM' FROM BILL;
+--Income By Cash--
+SELECT BillMethod,SUM(TotalBill) AS 'Cash'
+FROM BILL 
+GROUP BY BillMethod
+HAVING BillMethod='Cash';
+--Income By Bkash--
+SELECT BillMethod,SUM(TotalBill) AS 'Bkash'
+FROM BILL 
+GROUP BY BillMethod
+HAVING BillMethod='Bkash';
+--Income By Rocket--
+SELECT BillMethod,SUM(TotalBill) AS 'Rocket'
+FROM BILL 
+GROUP BY BillMethod
+HAVING BillMethod='Rocket';
+--Income By Credit Card--
+SELECT BillMethod,SUM(TotalBill) AS 'Credit Card'
+FROM BILL 
+GROUP BY BillMethod
+HAVING BillMethod='Credit Card';
+
+--Maximum Used Airline--
+SELECT b.[Airline Name], COUNT(b.[Airline Name]) 
+FROM (SELECT TICKET_BUYING.TicketID,TICKET_BUYING.CustomerId,PASSENGER.Name,TICKET_BUYING.Class,TICKET_BUYING.FlightFinalID AS 'Flight ID',FLIGHT_INFO_FINAL.FlightDate AS 'Flight Date',FLIGHT_INFO.StartingPlace AS 'Starting Place',FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName AS 'Airline Name',FLIGHT_INFO.DepartureTime AS 'Departure Time',FLIGHT_INFO.ArrivalTime AS 'Arrival Time'
+FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerId=PASSENGER.CustomerId INNER JOIN
+FLIGHT_INFO_FINAL ON TICKET_BUYING.FlightFinalID=FLIGHT_INFO_FINAL.FlightFinalID INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID)b  GROUP BY b.[Airline Name] 
+HAVING COUNT (b.[Airline Name])=( 
+SELECT MAX(x.mycount) 
+FROM ( 
+SELECT a.[Airline Name], COUNT(a.[Airline Name]) mycount 
+FROM (SELECT TICKET_BUYING.TicketID,TICKET_BUYING.CustomerId,PASSENGER.Name,TICKET_BUYING.Class,TICKET_BUYING.FlightFinalID AS 'Flight ID',FLIGHT_INFO_FINAL.FlightDate AS 'Flight Date',FLIGHT_INFO.StartingPlace AS 'Starting Place',FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName AS 'Airline Name',FLIGHT_INFO.DepartureTime AS 'Departure Time',FLIGHT_INFO.ArrivalTime AS 'Arrival Time'
+FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerId=PASSENGER.CustomerId INNER JOIN
+FLIGHT_INFO_FINAL ON TICKET_BUYING.FlightFinalID=FLIGHT_INFO_FINAL.FlightFinalID INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID)a
+GROUP BY a.[Airline Name])x);
+
+--Maximum Used Root--
+SELECT b.[Starting Place],b.[Destination],COUNT(b.[FlightID])
+FROM
+(SELECT TICKET_BUYING.TicketID,TICKET_BUYING.CustomerId,PASSENGER.Name,TICKET_BUYING.Class,TICKET_BUYING.FlightFinalID AS 'Schedule ID',FLIGHT_INFO_FINAL.FlightID,FLIGHT_INFO_FINAL.FlightDate AS 'Flight Date',FLIGHT_INFO.StartingPlace AS 'Starting Place',FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName AS 'Airline Name',FLIGHT_INFO.DepartureTime AS 'Departure Time',FLIGHT_INFO.ArrivalTime AS 'Arrival Time'
+FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerId=PASSENGER.CustomerId INNER JOIN
+FLIGHT_INFO_FINAL ON TICKET_BUYING.FlightFinalID=FLIGHT_INFO_FINAL.FlightFinalID INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID)b GROUP BY b.[Starting Place],b.Destination
+HAVING COUNT(b.[FlightID])=(
+SELECT MAX(x.mycount)
+FROM(SELECT a.[Starting Place],a.Destination,COUNT(a.FlightID) mycount FROM (SELECT TICKET_BUYING.TicketID,TICKET_BUYING.CustomerId,PASSENGER.Name,TICKET_BUYING.Class,TICKET_BUYING.FlightFinalID AS 'Schedule ID',FLIGHT_INFO_FINAL.FlightID,FLIGHT_INFO_FINAL.FlightDate AS 'Flight Date',FLIGHT_INFO.StartingPlace AS 'Starting Place',FLIGHT_INFO.Destination,FLIGHT_INFO.AirLineName AS 'Airline Name',FLIGHT_INFO.DepartureTime AS 'Departure Time',FLIGHT_INFO.ArrivalTime AS 'Arrival Time'
+FROM TICKET_BUYING INNER JOIN PASSENGER ON TICKET_BUYING.CustomerId=PASSENGER.CustomerId INNER JOIN
+FLIGHT_INFO_FINAL ON TICKET_BUYING.FlightFinalID=FLIGHT_INFO_FINAL.FlightFinalID INNER JOIN FLIGHT_INFO
+ON FLIGHT_INFO_FINAL.FlightID=FLIGHT_INFO.FlightID)a
+GROUP BY a.[Starting Place],a.Destination)x);
+
